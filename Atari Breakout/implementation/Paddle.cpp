@@ -2,14 +2,15 @@
 #include <iostream>
 
 Paddle::Paddle(const Color& paddleColor, float startX, float startY) {
-            if(startX < 0) startX = 0;
-            if(startY < 0) startY = 0;
-            paddleRect = {startX, startY, PADDLE_WIDTH, PADDLE_HEIGHT};
-            this->paddleColor.a = paddleColor.a;
-            this->paddleColor.r = paddleColor.r;
-            this->paddleColor.g = paddleColor.g;
-            this->paddleColor.b = paddleColor.b;
-        }
+    if(startX < 0) startX = 0;
+    if(startY < 0) startY = 0;
+    paddleRect = {startX, startY, PADDLE_WIDTH, PADDLE_HEIGHT};
+    
+    this->paddleColor.a = paddleColor.a;
+    this->paddleColor.r = paddleColor.r;
+    this->paddleColor.g = paddleColor.g;
+    this->paddleColor.b = paddleColor.b;
+}
 
 const Rectangle& Paddle::getPaddleRect() const {return paddleRect;}
 
