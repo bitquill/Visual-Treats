@@ -161,30 +161,19 @@ class Ball {
         }
 };
 
-class Game {
+class BreakoutTileManager {
     public:
         const int NUM_TILE_ROWS = 1;
         const float TILE_WIDTH_A = 80;
         const float TILE_WIDTH_B = 50;
         const float TILE_HEIGHT = 40;
 
-        Game(int tileRowStart, const Vector2& paddlePos, const Vector2& ballPos): gridStart(tileRowStart),
-        paddle(PURPLE, paddlePos.x, paddlePos.y), ball(ballPos) {
-            initialPaddlePos = paddlePos;
-            startRect = {0, 0, (float) GetScreenWidth(), (float) gridStart};
-            initializeGrid(tileRowStart);
+        BreakoutTileManager(int topRectHeight): fillerRectHeight(topRectHeight) {
+            startRect = {0, 0, (float) GetScreenWidth(), (float) topRectHeight};
+            initializeGrid(topRectHeight);
         }
 
-        void tick() {
-            bool gameEnd = ball.isGameOver();
-
-            draw(gameEnd);
-            paddle.move(gameEnd);
-            ball.move(paddle);
-            move(ball);
-        }
-
-        void draw(bool didGameEnd) {
+        void draw() const {
             DrawRectangleRec(startRect, LIGHTGRAY);
             std::cout << tiles.at(0).size() << std::endl;
             
@@ -196,32 +185,9 @@ class Game {
                     }
                 }
             }
-
-            paddle.draw();
-            ball.draw();
-
-            bool gameCleared = checkTilesCleared();
-            //bool gameCleared = true;
-
-            if(gameCleared) {
-                char winMessage[24] = "Congrats! Game Cleared!";
-                int measuredWin = MeasureText(winMessage, 40);
-                DrawText(winMessage, (GetScreenWidth() / 2) - (measuredWin / 2), 
-                GetScreenHeight() / 2, 40, GREEN);
-                ball.winTransform();
-                paddle.winTransform();
-            } 
-            
-            if(didGameEnd && !gameCleared) {
-                char loseMessage[11] = "Game Over!";
-                int measuredLose = MeasureText(loseMessage, 30);
-                DrawText(loseMessage, (GetScreenWidth() / 2) - (measuredLose / 2), GetScreenHeight() / 2, 24, RED);
-            }
-
         }
 
-        void move(Ball& ball) {
-
+        void checkCollision(Ball& ball) {
             if(CheckCollisionCircleRec(ball.getPos(), ball.getRadius(), startRect)) {
                 ball.updateOnCollisionTop(startRect);
             }
@@ -236,18 +202,27 @@ class Game {
             }
         }
 
+        bool checkTilesCleared() const {
+            int numTileRowsCleared = 0;
+            int numTiles = 0;
+            for(const std::vector<BreakoutTile>& tileRow : tiles) {
+                for(const BreakoutTile& tile : tileRow) {
+                    if(tile.hasCollided) numTileRowsCleared += 1;
+                    numTiles += 1;
+                }
+            }
+            
+            return numTileRowsCleared == numTiles;
+        }
+    
     private:
         std::vector<std::vector<BreakoutTile> > tiles;
-        int gridStart = 20;
-        Vector2 initialPaddlePos;
+        int fillerRectHeight = 20;
         Rectangle startRect;
 
-        Paddle paddle;
-        Ball ball;
-
-        void initializeGrid(int blockStart) {
+        void initializeGrid(int startingRectStart) {
             bool useTileA = true;
-            int gridX = blockStart + 20;
+            int gridX = startingRectStart + 20;
             for(size_t i = 0; i < NUM_TILE_ROWS; i++) {
                 bool rowFilled = false;
                 float currentWidth = 0;
@@ -274,19 +249,60 @@ class Game {
                 tiles.push_back(tileRow);
             }
         }
+};
 
-        bool checkTilesCleared() const {
-            int numTileRowsCleared = 0;
-            int numTiles = 0;
-            for(const std::vector<BreakoutTile>& tileRow : tiles) {
-                for(const BreakoutTile& tile : tileRow) {
-                    if(tile.hasCollided) numTileRowsCleared += 1;
-                    numTiles += 1;
-                }
-            }
-            
-            return numTileRowsCleared == numTiles;
+class Game {
+    public:
+        Game(int tileRowStart, const Vector2& paddlePos, const Vector2& ballPos): 
+        tileManager(tileRowStart), paddle(PURPLE, paddlePos.x, paddlePos.y), ball(ballPos) {}
+
+        void tick() {
+            bool gameEnd = ball.isGameOver();
+
+            draw(gameEnd);
+            move(gameEnd);
         }
+
+        void draw(bool didGameEnd) {
+
+            paddle.draw();
+            ball.draw();
+            tileManager.draw();
+
+            bool gameCleared = tileManager.checkTilesCleared();
+            //bool gameCleared = true;
+
+            checkWinLoseCondition(didGameEnd, gameCleared);
+
+        }
+
+        void move(bool didGameEnd) {
+            paddle.move(didGameEnd);
+            ball.move(paddle);
+            tileManager.checkCollision(ball);
+        }
+
+        void checkWinLoseCondition(bool isGameOver, bool isGameCleared) {
+            if(isGameCleared) {
+                char winMessage[24] = "Congrats! Game Cleared!";
+                int measuredWin = MeasureText(winMessage, 40);
+                DrawText(winMessage, (GetScreenWidth() / 2) - (measuredWin / 2), 
+                GetScreenHeight() / 2, 40, GREEN);
+                ball.winTransform();
+                paddle.winTransform();
+            } 
+            
+            if(isGameOver && !isGameCleared) {
+                char loseMessage[11] = "Game Over!";
+                int measuredLose = MeasureText(loseMessage, 30);
+                DrawText(loseMessage, (GetScreenWidth() / 2) - (measuredLose / 2), GetScreenHeight() / 2, 24, RED);
+            }
+        }
+
+    private:
+        Paddle paddle;
+        Ball ball;
+        BreakoutTileManager tileManager;
 };
 
 const int GAME_WIDTH = 1000;
